@@ -1,0 +1,18 @@
+RewriteEngine On
+RewriteBase /FTC-Marketplace/api/
+
+# Handle API routes
+RewriteRule ^auth/register$ auth/register.php [L,QSA]
+RewriteRule ^auth/login$ auth/login.php [L,QSA]
+RewriteRule ^auth/me$ auth/me.php [L,QSA]
+RewriteRule ^auth/profile$ auth/profile.php [L,QSA]
+RewriteRule ^auth/password$ auth/password.php [L,QSA]
+
+RewriteRule ^teams$ teams/index.php [L,QSA]
+RewriteRule ^teams/(\d+)$ teams/detail.php?id=$1 [L,QSA]
+
+RewriteRule ^listings$ listings/index.php [L,QSA]
+RewriteRule ^listings/my$ listings/my.php [L,QSA]
+RewriteRule ^listings/upload$ listings/upload.php [L,QSA]
+RewriteRule ^listings/(\d+)/images$ listings/images.php?listing_id=$1 [L,QSA]
+RewriteRule ^listings/(\d+)$ listings/detail.php?id=$1 [L,QSA]
