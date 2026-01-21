@@ -1,9 +1,11 @@
 import axios from 'axios'
 
-// Use direct URL to Apache if proxy isn't working
+// API URL configuration
+// - Development: Uses local Apache/XAMPP
+// - Production: Uses VITE_API_URL environment variable
 const baseURL = import.meta.env.DEV
-  ? 'http://localhost/FTC-Marketplace/api'  // Development: direct to Apache
-  : '/api'  // Production: relative path
+  ? 'http://localhost/FTC-Marketplace/api'
+  : import.meta.env.VITE_API_URL || '/api'
 
 const api = axios.create({
   baseURL,
