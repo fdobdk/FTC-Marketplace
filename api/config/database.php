@@ -42,8 +42,7 @@ class Database {
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            // Include connection details in error for debugging (remove in production)
-            throw new Exception("Database connection error: " . $e->getMessage() . " (Host: {$this->host}, Port: {$this->port}, DB: {$this->db_name})");
+            throw new Exception("Database connection error: " . $e->getMessage());
         }
 
         return $this->conn;
