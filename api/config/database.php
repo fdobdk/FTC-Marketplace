@@ -9,12 +9,26 @@ class Database {
 
     public function __construct() {
         // Use environment variables if available, otherwise use defaults for local dev
-        // Try both getenv() and $_ENV for compatibility
-        $this->host = getenv('DB_HOST') ?: ($_ENV['DB_HOST'] ?? 'localhost');
-        $this->db_name = getenv('DB_NAME') ?: ($_ENV['DB_NAME'] ?? 'ftc_marketplace');
-        $this->username = getenv('DB_USER') ?: ($_ENV['DB_USER'] ?? 'root');
-        $this->password = getenv('DB_PASSWORD') ?: ($_ENV['DB_PASSWORD'] ?? '');
-        $this->port = getenv('DB_PORT') ?: ($_ENV['DB_PORT'] ?? '3306');
+        // Try getenv(), $_ENV, and $_SERVER for maximum compatibility with Docker
+        $this->host = $this->getEnvVar('DB_HOST', 'localhost');
+        $this->db_name = $this->getEnvVar('DB_NAME', 'ftc_marketplace');
+        $this->username = $this->getEnvVar('DB_USER', 'root');
+        $this->password = $this->getEnvVar('DB_PASSWORD', '');
+        $this->port = $this->getEnvVar('DB_PORT', '3306');
+    }
+
+    private function getEnvVar($name, $default = null) {
+        // Try multiple methods to get environment variable
+        if (getenv($name) !== false) {
+            return getenv($name);
+        }
+        if (isset($_ENV[$name])) {
+            return $_ENV[$name];
+        }
+        if (isset($_SERVER[$name])) {
+            return $_SERVER[$name];
+        }
+        return $default;
     }
 
     public function getConnection() {

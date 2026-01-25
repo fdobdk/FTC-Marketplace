@@ -12,5 +12,5 @@ COPY . .
 # Expose port (Railway sets PORT env var)
 EXPOSE 8080
 
-# Start PHP built-in server
-CMD php -S 0.0.0.0:${PORT:-8080} router.php
+# Use shell form to ensure environment variables are expanded
+CMD ["sh", "-c", "php -S 0.0.0.0:${PORT:-8080} router.php"]
