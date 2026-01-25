@@ -9,12 +9,12 @@ class Database {
 
     public function __construct() {
         // Use environment variables if available, otherwise use defaults for local dev
-        // Try getenv(), $_ENV, and $_SERVER for maximum compatibility with Docker
-        $this->host = $this->getEnvVar('DB_HOST', 'localhost');
-        $this->db_name = $this->getEnvVar('DB_NAME', 'ftc_marketplace');
-        $this->username = $this->getEnvVar('DB_USER', 'root');
-        $this->password = $this->getEnvVar('DB_PASSWORD', '');
-        $this->port = $this->getEnvVar('DB_PORT', '3306');
+        // Check both DB_* (custom) and MYSQL* (Railway default) variable names
+        $this->host = $this->getEnvVar('DB_HOST') ?: $this->getEnvVar('MYSQLHOST', 'localhost');
+        $this->db_name = $this->getEnvVar('DB_NAME') ?: $this->getEnvVar('MYSQLDATABASE', 'ftc_marketplace');
+        $this->username = $this->getEnvVar('DB_USER') ?: $this->getEnvVar('MYSQLUSER', 'root');
+        $this->password = $this->getEnvVar('DB_PASSWORD') ?: $this->getEnvVar('MYSQLPASSWORD', '');
+        $this->port = $this->getEnvVar('DB_PORT') ?: $this->getEnvVar('MYSQLPORT', '3306');
     }
 
     private function getEnvVar($name, $default = null) {
