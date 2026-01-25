@@ -1,0 +1,13 @@
+{
+    "name": "ftc-marketplace/api",
+    "description": "FTC Marketplace API",
+    "type": "project",
+    "require": {
+        "php": ">=8.0",
+        "ext-pdo": "*",
+        "ext-pdo_mysql": "*"
+    },
+    "scripts": {
+        "start": "php -S 0.0.0.0:${PORT:-8080} router.php"
+    }
+}
