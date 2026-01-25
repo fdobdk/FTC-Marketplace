@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { Users, AlertCircle, ArrowLeft } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Users, AlertCircle, ArrowLeft, Shield, UserMinus, ChevronDown, ChevronUp, Check } from 'lucide-react'
 import { US_STATES } from '../utils/states'
 import { useAuth } from '../context/AuthContext'
 import api from '../utils/api'
@@ -21,9 +21,15 @@ function EditTeam() {
     contact_email: ''
   })
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [authorized, setAuthorized] = useState(false)
+
+  // Member management state
+  const [members, setMembers] = useState([])
+  const [showMembers, setShowMembers] = useState(false)
+  const [memberActionLoading, setMemberActionLoading] = useState(null)
 
   useEffect(() => {
     checkAuthorizationAndFetch()
@@ -34,15 +40,15 @@ function EditTeam() {
     setError('')
 
     try {
-      // Check if user is admin
-      const isAdmin = user?.role === 'admin'
+      // Check if user is a team admin of THIS specific team
+      const isTeamAdmin = user?.team_id === parseInt(id) && user?.role === 'admin'
 
-      // Check if user is a member of this team
-      const isTeamMember = team && team.id === parseInt(id)
+      // Check if user is a site admin (can edit any team)
+      const isSiteAdmin = user?.is_site_admin
 
-      if (!isAdmin && !isTeamMember) {
+      if (!isTeamAdmin && !isSiteAdmin) {
         setAuthorized(false)
-        setError('You do not have permission to edit this team. Only team members and admins can edit team details.')
+        setError('You do not have permission to edit this team. Only team admins can edit team details.')
         setLoading(false)
         return
       }
@@ -82,6 +88,61 @@ function EditTeam() {
     }
   }
 
+  const fetchMembers = async () => {
+    try {
+      const response = await api.get(`/teams/members.php?team_id=${id}`)
+      setMembers(response.data.members || [])
+    } catch (err) {
+      console.error('Failed to fetch members:', err)
+    }
+  }
+
+  const handlePromoteDemote = async (memberId, currentRole) => {
+    const newRole = currentRole === 'admin' ? 'member' : 'admin'
+    const action = newRole === 'admin' ? 'promote' : 'demote'
+
+    if (!window.confirm(`Are you sure you want to ${action} this member?`)) {
+      return
+    }
+
+    setMemberActionLoading(memberId)
+    setError('')
+    setSuccess('')
+
+    try {
+      await api.put('/teams/members.php', {
+        user_id: memberId,
+        role: newRole
+      })
+      setSuccess(`Member ${newRole === 'admin' ? 'promoted to admin' : 'demoted to member'} successfully`)
+      fetchMembers()
+    } catch (err) {
+      setError(err.response?.data?.message || `Failed to ${action} member`)
+    } finally {
+      setMemberActionLoading(null)
+    }
+  }
+
+  const handleRemoveMember = async (memberId, memberName) => {
+    if (!window.confirm(`Are you sure you want to remove ${memberName} from the team? They will need to rejoin.`)) {
+      return
+    }
+
+    setMemberActionLoading(memberId)
+    setError('')
+    setSuccess('')
+
+    try {
+      await api.delete(`/teams/members.php?user_id=${memberId}`)
+      setSuccess(`${memberName} has been removed from the team`)
+      fetchMembers()
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to remove member')
+    } finally {
+      setMemberActionLoading(null)
+    }
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({
@@ -89,6 +150,14 @@ function EditTeam() {
       [name]: value
     }))
     setError('')
+    setSuccess('')
+  }
+
+  const toggleMembersSection = () => {
+    if (!showMembers) {
+      fetchMembers()
+    }
+    setShowMembers(!showMembers)
   }
 
   const handleSubmit = async (e) => {
@@ -207,12 +276,23 @@ function EditTeam() {
 
           {error && (
             <motion.div
-              className="error-message"
+              className="message error-message"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
             >
               <AlertCircle size={18} />
               {error}
+            </motion.div>
+          )}
+
+          {success && (
+            <motion.div
+              className="message success-message"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+            >
+              <Check size={18} />
+              {success}
             </motion.div>
           )}
 
@@ -323,6 +403,86 @@ function EditTeam() {
               </motion.button>
             </div>
           </form>
+
+          {/* Member Management Section */}
+          <div className="members-section">
+            <button
+              type="button"
+              className="members-toggle"
+              onClick={toggleMembersSection}
+            >
+              <div className="toggle-left">
+                <Users size={20} />
+                <span>Manage Team Members</span>
+              </div>
+              {showMembers ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+
+            <AnimatePresence>
+              {showMembers && (
+                <motion.div
+                  className="members-list"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {members.length === 0 ? (
+                    <div className="empty-members">
+                      <p>No members found</p>
+                    </div>
+                  ) : (
+                    members.map((member) => (
+                      <div key={member.id} className="member-item">
+                        <div className="member-info">
+                          <div className="member-avatar">
+                            {member.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="member-details">
+                            <span className="member-name">
+                              {member.name}
+                              {member.id === user?.id && <span className="you-badge">(You)</span>}
+                            </span>
+                            <span className="member-email">{member.email}</span>
+                            <div className="member-badges">
+                              <span className={`role-badge role-${member.role}`}>
+                                {member.role === 'admin' ? 'Admin' : 'Member'}
+                              </span>
+                              {member.team_role && (
+                                <span className="team-role-badge">{member.team_role}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="member-actions">
+                          <button
+                            type="button"
+                            className={`action-btn ${member.role === 'admin' ? 'demote' : 'promote'}`}
+                            onClick={() => handlePromoteDemote(member.id, member.role)}
+                            disabled={memberActionLoading === member.id}
+                            title={member.role === 'admin' ? 'Demote to Member' : 'Promote to Admin'}
+                          >
+                            <Shield size={16} />
+                            {member.role === 'admin' ? 'Demote' : 'Promote'}
+                          </button>
+                          <button
+                            type="button"
+                            className="action-btn remove"
+                            onClick={() => handleRemoveMember(member.id, member.name)}
+                            disabled={memberActionLoading === member.id}
+                            title="Remove from Team"
+                          >
+                            <UserMinus size={16} />
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </motion.div>
       </div>
 
@@ -332,7 +492,7 @@ function EditTeam() {
         }
 
         .edit-form-container {
-          max-width: 600px;
+          max-width: 700px;
           margin: 0 auto;
           background: var(--bg-card);
           border: 1px solid var(--border-color);
@@ -367,17 +527,26 @@ function EditTeam() {
           color: var(--text-secondary);
         }
 
-        .error-message {
+        .message {
           display: flex;
           align-items: center;
           gap: 10px;
           padding: 14px 16px;
-          background: rgba(255, 68, 68, 0.1);
-          border: 1px solid rgba(255, 68, 68, 0.3);
           border-radius: var(--radius-md);
-          color: #ff6b6b;
           font-size: 14px;
           margin-bottom: 24px;
+        }
+
+        .error-message {
+          background: rgba(255, 68, 68, 0.1);
+          border: 1px solid rgba(255, 68, 68, 0.3);
+          color: #ff6b6b;
+        }
+
+        .success-message {
+          background: rgba(0, 200, 83, 0.1);
+          border: 1px solid rgba(0, 200, 83, 0.3);
+          color: var(--accent-green);
         }
 
         .form-row {
@@ -402,6 +571,198 @@ function EditTeam() {
           border-top: 1px solid var(--border-color);
         }
 
+        /* Member Management */
+        .members-section {
+          margin-top: 32px;
+          border-top: 1px solid var(--border-color);
+          padding-top: 24px;
+        }
+
+        .members-toggle {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          padding: 16px;
+          background: var(--bg-dark);
+          border: 1px solid var(--border-color);
+          border-radius: var(--radius-md);
+          color: var(--text-primary);
+          font-size: 15px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all var(--transition-fast);
+        }
+
+        .members-toggle:hover {
+          border-color: var(--primary);
+        }
+
+        .toggle-left {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .members-list {
+          overflow: hidden;
+          margin-top: 16px;
+          border: 1px solid var(--border-color);
+          border-radius: var(--radius-md);
+        }
+
+        .empty-members {
+          padding: 32px;
+          text-align: center;
+          color: var(--text-muted);
+        }
+
+        .member-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 16px;
+          border-bottom: 1px solid var(--border-color);
+          gap: 16px;
+        }
+
+        .member-item:last-child {
+          border-bottom: none;
+        }
+
+        .member-info {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex: 1;
+          min-width: 0;
+        }
+
+        .member-avatar {
+          width: 44px;
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--secondary-light);
+          border-radius: 50%;
+          font-weight: 600;
+          color: var(--primary);
+          flex-shrink: 0;
+        }
+
+        .member-details {
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
+        }
+
+        .member-name {
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .you-badge {
+          font-size: 11px;
+          color: var(--text-muted);
+          font-weight: normal;
+        }
+
+        .member-email {
+          font-size: 12px;
+          color: var(--text-muted);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .member-badges {
+          display: flex;
+          gap: 6px;
+          margin-top: 4px;
+        }
+
+        .role-badge {
+          font-size: 10px;
+          padding: 2px 8px;
+          border-radius: 10px;
+          font-weight: 500;
+        }
+
+        .role-admin {
+          background: rgba(245, 124, 0, 0.15);
+          color: var(--primary);
+        }
+
+        .role-member {
+          background: var(--bg-dark);
+          color: var(--text-muted);
+        }
+
+        .team-role-badge {
+          font-size: 10px;
+          padding: 2px 8px;
+          border-radius: 10px;
+          background: rgba(99, 102, 241, 0.15);
+          color: #6366f1;
+        }
+
+        .member-actions {
+          display: flex;
+          gap: 8px;
+          flex-shrink: 0;
+        }
+
+        .action-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 12px;
+          font-size: 12px;
+          font-weight: 500;
+          border: 1px solid var(--border-color);
+          border-radius: var(--radius-md);
+          cursor: pointer;
+          transition: all var(--transition-fast);
+        }
+
+        .action-btn.promote {
+          background: rgba(0, 200, 83, 0.1);
+          border-color: rgba(0, 200, 83, 0.3);
+          color: var(--accent-green);
+        }
+
+        .action-btn.promote:hover {
+          background: rgba(0, 200, 83, 0.2);
+        }
+
+        .action-btn.demote {
+          background: rgba(245, 158, 11, 0.1);
+          border-color: rgba(245, 158, 11, 0.3);
+          color: #f59e0b;
+        }
+
+        .action-btn.demote:hover {
+          background: rgba(245, 158, 11, 0.2);
+        }
+
+        .action-btn.remove {
+          background: rgba(239, 68, 68, 0.1);
+          border-color: rgba(239, 68, 68, 0.3);
+          color: #ef4444;
+        }
+
+        .action-btn.remove:hover {
+          background: rgba(239, 68, 68, 0.2);
+        }
+
+        .action-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
         @media (max-width: 640px) {
           .edit-form-container {
             padding: 24px;
@@ -417,6 +778,21 @@ function EditTeam() {
 
           .form-actions .btn {
             width: 100%;
+          }
+
+          .member-item {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .member-actions {
+            width: 100%;
+            margin-top: 12px;
+          }
+
+          .action-btn {
+            flex: 1;
+            justify-content: center;
           }
         }
       `}</style>

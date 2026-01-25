@@ -154,35 +154,70 @@ function TeamDetail() {
             )}
           </div>
 
-          {/* Team Members (if public) */}
-          {team.members && team.members.length > 0 && (
+          {/* Active Team Members */}
+          {team.members && team.members.filter(m => !m.team_status || m.team_status === 'active').length > 0 && (
             <div className="team-members">
               <h2>Team Members</h2>
               <div className="members-grid">
-                {team.members.map((member, index) => (
-                  <motion.div
-                    key={member.id}
-                    className="member-card"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                  >
-                    <div className="member-avatar">
-                      {member.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="member-info">
-                      <span className="member-name">{member.name}</span>
-                      <span className="member-role">
-                        {member.team_role || (member.role === 'admin' ? 'Team Admin' : 'Member')}
-                      </span>
-                      {member.team_status && member.team_status !== 'active' && (
-                        <span className={`member-status member-status-${member.team_status}`}>
-                          {member.team_status === 'alumni' ? 'Alumni' : 'Mentor'}
-                        </span>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
+                {team.members
+                  .filter(member => !member.team_status || member.team_status === 'active')
+                  .map((member, index) => (
+                    <motion.div
+                      key={member.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <Link to={`/members/${member.id}`} className="member-card member-card-link">
+                        <div className="member-avatar">
+                          {member.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="member-info">
+                          <span className="member-name">{member.name}</span>
+                          <span className="member-role">
+                            {member.team_role || (member.role === 'admin' ? 'Team Admin' : 'Member')}
+                          </span>
+                          {member.graduation_year && (
+                            <span className="member-grad">Class of {member.graduation_year}</span>
+                          )}
+                        </div>
+                      </Link>
+                    </motion.div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Inactive Members (Alumni/Mentors) */}
+          {team.members && team.members.filter(m => m.team_status && m.team_status !== 'active').length > 0 && (
+            <div className="team-members inactive-members">
+              <h2>Alumni & Mentors</h2>
+              <div className="members-grid">
+                {team.members
+                  .filter(member => member.team_status && member.team_status !== 'active')
+                  .map((member, index) => (
+                    <motion.div
+                      key={member.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <Link to={`/members/${member.id}`} className="member-card member-card-link">
+                        <div className="member-avatar member-avatar-inactive">
+                          {member.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="member-info">
+                          <span className="member-name">{member.name}</span>
+                          <span className="member-role">
+                            {member.team_role || (member.team_status === 'alumni' ? 'Alumni' : 'Mentor')}
+                          </span>
+                          <span className={`member-status member-status-${member.team_status}`}>
+                            {member.team_status === 'alumni' ? 'Alumni' : 'Mentor'}
+                          </span>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  ))}
               </div>
             </div>
           )}
@@ -336,6 +371,21 @@ function TeamDetail() {
           background: var(--bg-card);
           border: 1px solid var(--border-color);
           border-radius: var(--radius-md);
+          text-decoration: none;
+          color: inherit;
+        }
+
+        .member-card-link {
+          transition: all var(--transition-fast);
+        }
+
+        .member-card-link:hover {
+          border-color: var(--primary);
+          transform: translateY(-2px);
+        }
+
+        .member-card-link:hover .member-name {
+          color: var(--primary);
         }
 
         .member-avatar {
@@ -348,17 +398,40 @@ function TeamDetail() {
           border-radius: 50%;
           font-weight: 600;
           color: var(--primary);
+          flex-shrink: 0;
+        }
+
+        .member-avatar-inactive {
+          background: var(--bg-dark);
+          color: var(--text-muted);
+        }
+
+        .inactive-members {
+          margin-top: 40px;
+          opacity: 0.9;
+        }
+
+        .inactive-members h2 {
+          color: var(--text-secondary);
         }
 
         .member-name {
           display: block;
           font-weight: 500;
+          transition: color var(--transition-fast);
         }
 
         .member-role {
           display: block;
           font-size: 12px;
           color: var(--text-muted);
+        }
+
+        .member-grad {
+          display: block;
+          font-size: 11px;
+          color: var(--text-muted);
+          margin-top: 2px;
         }
 
         .member-status {

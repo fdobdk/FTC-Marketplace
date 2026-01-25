@@ -3,6 +3,7 @@ require_once __DIR__ . '/../config/cors.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../utils/auth.php';
 require_once __DIR__ . '/../utils/response.php';
+require_once __DIR__ . '/../utils/encryption.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     errorResponse('Method not allowed', 405);
@@ -12,12 +13,17 @@ try {
     $database = new Database();
     $db = $database->getConnection();
     $auth = new Auth($db);
+    $encryption = new Encryption();
 
     $user = $auth->getAuthenticatedUser();
 
     if (!$user) {
         errorResponse('Unauthorized', 401);
     }
+
+    // Decrypt emails
+    $decryptedEmail = $encryption->decrypt($user['email']);
+    $decryptedContactEmail = $user['contact_email'] ? $encryption->decrypt($user['contact_email']) : null;
 
     // Build team object if user has a team
     $team = null;
@@ -35,10 +41,10 @@ try {
         'user' => [
             'id' => $user['id'],
             'name' => $user['name'],
-            'email' => $user['email'],
+            'email' => $decryptedEmail,
             'team_id' => $user['team_id'],
             'role' => $user['role'],
-            'contact_email' => $user['contact_email'],
+            'contact_email' => $decryptedContactEmail,
             'contact_phone' => $user['contact_phone'],
             'contact_discord' => $user['contact_discord'],
             'team_role' => $user['team_role'],

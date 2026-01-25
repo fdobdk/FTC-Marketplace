@@ -234,26 +234,27 @@ function Home() {
         /* Hero Section */
         .hero {
           position: relative;
-          height: 100vh;
-          min-height: 700px;
+          min-height: 100vh;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-top: -80px;
           padding-top: 80px;
           box-sizing: border-box;
         }
 
         .hero-bg {
           position: absolute;
-          inset: 0;
+          top: -80px;
+          left: 0;
+          right: 0;
+          bottom: 0;
           overflow: hidden;
         }
 
         .hero-gradient {
           position: absolute;
           inset: 0;
-          background: radial-gradient(ellipse at top, rgba(245, 124, 0, 0.15) 0%, transparent 60%);
+          background: radial-gradient(ellipse at top center, rgba(245, 124, 0, 0.12) 0%, transparent 50%);
         }
 
         .hero-grid {

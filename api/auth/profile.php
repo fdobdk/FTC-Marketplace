@@ -3,6 +3,7 @@ require_once __DIR__ . '/../config/cors.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../utils/auth.php';
 require_once __DIR__ . '/../utils/response.php';
+require_once __DIR__ . '/../utils/encryption.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
     errorResponse('Method not allowed', 405);
@@ -12,6 +13,7 @@ try {
     $database = new Database();
     $db = $database->getConnection();
     $auth = new Auth($db);
+    $encryption = new Encryption();
 
     $user = $auth->getAuthenticatedUser();
 
@@ -21,11 +23,15 @@ try {
 
     $data = json_decode(file_get_contents('php://input'), true);
 
+    // Decrypt stored emails for comparison
+    $currentEmail = $encryption->decrypt($user['email']);
+    $currentContactEmail = $user['contact_email'] ? $encryption->decrypt($user['contact_email']) : null;
+
     $name = isset($data['name']) ? trim($data['name']) : $user['name'];
-    $email = isset($data['email']) ? trim(strtolower($data['email'])) : $user['email'];
+    $email = isset($data['email']) ? trim(strtolower($data['email'])) : $currentEmail;
 
     // Contact fields - allow null/empty
-    $contact_email = isset($data['contact_email']) ? trim($data['contact_email']) : $user['contact_email'];
+    $contact_email = isset($data['contact_email']) ? trim($data['contact_email']) : $currentContactEmail;
     $contact_phone = isset($data['contact_phone']) ? trim($data['contact_phone']) : $user['contact_phone'];
     $contact_discord = isset($data['contact_discord']) ? trim($data['contact_discord']) : $user['contact_discord'];
 
@@ -58,20 +64,28 @@ try {
     }
 
     // Check if email is taken by another user
-    if ($email !== $user['email']) {
-        $query = "SELECT id FROM users WHERE email = :email AND id != :id";
+    $emailChanged = $email !== $currentEmail;
+    if ($emailChanged) {
+        $newEmailHash = $encryption->hashForSearch($email);
+        $query = "SELECT id FROM users WHERE email_hash = :email_hash AND id != :id";
         $stmt = $db->prepare($query);
-        $stmt->execute([':email' => $email, ':id' => $user['id']]);
+        $stmt->execute([':email_hash' => $newEmailHash, ':id' => $user['id']]);
 
         if ($stmt->fetch()) {
             errorResponse('Email already in use');
         }
     }
 
+    // Encrypt emails before saving
+    $encryptedEmail = $encryption->encrypt($email);
+    $emailHash = $encryption->hashForSearch($email);
+    $encryptedContactEmail = $contact_email ? $encryption->encrypt($contact_email) : null;
+
     // Update user
     $query = "UPDATE users SET
         name = :name,
         email = :email,
+        email_hash = :email_hash,
         contact_email = :contact_email,
         contact_phone = :contact_phone,
         contact_discord = :contact_discord,
@@ -84,8 +98,9 @@ try {
     $stmt = $db->prepare($query);
     $stmt->execute([
         ':name' => $name,
-        ':email' => $email,
-        ':contact_email' => $contact_email ?: null,
+        ':email' => $encryptedEmail,
+        ':email_hash' => $emailHash,
+        ':contact_email' => $encryptedContactEmail,
         ':contact_phone' => $contact_phone ?: null,
         ':contact_discord' => $contact_discord ?: null,
         ':team_role' => $team_role ?: null,

@@ -107,9 +107,9 @@ function Dashboard() {
               <div className="no-team">
                 <AlertCircle size={24} />
                 <p>You're not part of a team yet</p>
-                <Link to="/teams/create" className="btn btn-primary">
-                  <Plus size={16} />
-                  Create or Join Team
+                <Link to="/teams/join" className="btn btn-primary">
+                  <Users size={16} />
+                  Join a Team
                 </Link>
               </div>
             )}

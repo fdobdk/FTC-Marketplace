@@ -3,6 +3,7 @@ require_once __DIR__ . '/../config/cors.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../utils/auth.php';
 require_once __DIR__ . '/../utils/response.php';
+require_once __DIR__ . '/../utils/encryption.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     errorResponse('Method not allowed', 405);
@@ -33,24 +34,32 @@ try {
     $database = new Database();
     $db = $database->getConnection();
     $auth = new Auth($db);
+    $encryption = new Encryption();
 
-    // Check if email already exists
-    $query = "SELECT id FROM users WHERE email = :email";
+    // Create hash for searching
+    $emailHash = $encryption->hashForSearch($email);
+
+    // Check if email already exists (by hash)
+    $query = "SELECT id FROM users WHERE email_hash = :email_hash";
     $stmt = $db->prepare($query);
-    $stmt->execute([':email' => $email]);
+    $stmt->execute([':email_hash' => $emailHash]);
 
     if ($stmt->fetch()) {
         errorResponse('Email already registered');
     }
 
+    // Encrypt the email
+    $encryptedEmail = $encryption->encrypt($email);
+
     // Create user
     $hashedPassword = $auth->hashPassword($password);
 
-    $query = "INSERT INTO users (name, email, password) VALUES (:name, :email, :password)";
+    $query = "INSERT INTO users (name, email, email_hash, password) VALUES (:name, :email, :email_hash, :password)";
     $stmt = $db->prepare($query);
     $stmt->execute([
         ':name' => $name,
-        ':email' => $email,
+        ':email' => $encryptedEmail,
+        ':email_hash' => $emailHash,
         ':password' => $hashedPassword
     ]);
 

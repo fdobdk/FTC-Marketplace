@@ -12,7 +12,9 @@ import EditListing from './pages/EditListing'
 import Teams from './pages/Teams'
 import TeamDetail from './pages/TeamDetail'
 import CreateTeam from './pages/CreateTeam'
+import JoinTeam from './pages/JoinTeam'
 import EditTeam from './pages/EditTeam'
+import MemberProfile from './pages/MemberProfile'
 import Profile from './pages/Profile'
 import AdminDashboard from './pages/AdminDashboard'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -45,11 +47,17 @@ function App() {
           <Route path="teams/:id" element={
             <ProtectedRoute><TeamDetail /></ProtectedRoute>
           } />
+          <Route path="teams/join" element={
+            <ProtectedRoute><JoinTeam /></ProtectedRoute>
+          } />
           <Route path="teams/create" element={
             <ProtectedRoute><CreateTeam /></ProtectedRoute>
           } />
           <Route path="teams/:id/edit" element={
             <ProtectedRoute><EditTeam /></ProtectedRoute>
+          } />
+          <Route path="members/:id" element={
+            <ProtectedRoute><MemberProfile /></ProtectedRoute>
           } />
           <Route path="dashboard" element={
             <ProtectedRoute><Dashboard /></ProtectedRoute>
