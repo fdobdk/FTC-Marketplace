@@ -1,8 +1,8 @@
 <?php
-require_once '../config/cors.php';
-require_once '../config/database.php';
-require_once '../utils/auth.php';
-require_once '../utils/response.php';
+require_once __DIR__ . '/../config/cors.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../utils/auth.php';
+require_once __DIR__ . '/../utils/response.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
     errorResponse('Method not allowed', 405);
