@@ -7,6 +7,10 @@ const baseURL = import.meta.env.DEV
   ? 'http://localhost/FTC-Marketplace/api'
   : import.meta.env.VITE_API_URL || '/api'
 
+// Debug: Log the API URL (remove after debugging)
+console.log('API Base URL:', baseURL)
+console.log('VITE_API_URL:', import.meta.env.VITE_API_URL)
+
 const api = axios.create({
   baseURL,
   headers: {
